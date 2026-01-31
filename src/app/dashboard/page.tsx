@@ -11,11 +11,7 @@ import PricingCard from "@/components/PricingCard";
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
-  
-  // 1. Loading State: Starts TRUE so we don't show empty/dummy data
   const [loading, setLoading] = useState(true);
-  
-  // 2. Data State: Starts NULL. No dummy data allowed.
   const [licenseData, setLicenseData] = useState<any>(null);
 
   useEffect(() => {
@@ -25,7 +21,6 @@ export default function DashboardPage() {
       } else {
         setUser(currentUser);
         await fetchOrCreateUser(currentUser.uid, currentUser.email);
-        // Only stop loading AFTER we have tried to fetch data
         setLoading(false);
       }
     });
@@ -38,10 +33,8 @@ export default function DashboardPage() {
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
-        console.log("Found existing user data");
         setLicenseData(docSnap.data());
       } else {
-        console.log("New user! Creating Free Tier doc...");
         const freeTierData = {
           owner_id: uid,
           customer_email: email,
@@ -52,13 +45,11 @@ export default function DashboardPage() {
             FACEBOOK: { limit: 0, used_items: [] }
           }
         };
-        
         await setDoc(docRef, freeTierData);
         setLicenseData(freeTierData);
       }
     } catch (err) {
       console.error("Error fetching user data:", err);
-      // Even on error, we stop loading so the user isn't stuck
       setLoading(false);
     }
   };
@@ -68,7 +59,6 @@ export default function DashboardPage() {
     router.push("/login");
   };
 
-  // 3. Loading View (Prevents flashing of old/wrong data)
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -129,9 +119,12 @@ export default function DashboardPage() {
             )}
         </div>
 
-        {/* Quota Manager - Renders only if data exists */}
+        {/* Quota Manager - Pass KEY and QUOTAS */}
         {licenseData && licenseData.quotas ? (
-            <AgencySeatManager quotas={licenseData.quotas} />
+            <AgencySeatManager 
+                quotas={licenseData.quotas} 
+                licenseKey={licenseData.master_key} // <--- PASSED HERE
+            />
         ) : (
             <div className="p-4 bg-yellow-50 text-yellow-700 rounded-md">
               No subscription data found. Please select a plan below.
@@ -148,7 +141,6 @@ export default function DashboardPage() {
             <PricingCard
               name="Solo License"
               price="15"
-              // Uses .env variable now - safer!
               priceId={process.env.NEXT_PUBLIC_STRIPE_PRICE_SOLO || ""} 
               userId={user?.uid}
               userEmail={user?.email}
@@ -162,7 +154,6 @@ export default function DashboardPage() {
             <PricingCard
               name="Agency License"
               price="50"
-              // Uses .env variable now - safer!
               priceId={process.env.NEXT_PUBLIC_STRIPE_PRICE_AGENCY || ""}
               userId={user?.uid}
               userEmail={user?.email}

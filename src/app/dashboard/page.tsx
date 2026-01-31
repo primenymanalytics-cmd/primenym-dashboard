@@ -5,6 +5,15 @@ import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
+import { 
+    Key, 
+    LogOut, 
+    ShieldCheck, 
+    CreditCard, 
+    LayoutDashboard,
+    Copy,
+    Check
+} from "lucide-react";
 import AgencySeatManager from "@/components/AgencySeatManager";
 import PricingCard from "@/components/PricingCard";
 
@@ -13,6 +22,7 @@ export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [licenseData, setLicenseData] = useState<any>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -49,125 +59,147 @@ export default function DashboardPage() {
         setLicenseData(freeTierData);
       }
     } catch (err) {
-      console.error("Error fetching user data:", err);
+      console.error(err);
       setLoading(false);
     }
   };
 
-  const handleLogout = async () => {
-    await signOut(auth);
-    router.push("/login");
+  const copyKey = () => {
+    if (licenseData?.master_key) {
+        navigator.clipboard.writeText(licenseData.master_key);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    }
   };
 
-  if (loading) {
-    return (
+  if (loading) return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
-          <p className="mt-4 text-sm text-gray-500">Loading your dashboard...</p>
-        </div>
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
       </div>
-    );
-  }
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b border-gray-200">
+    <div className="min-h-screen bg-slate-50 font-sans">
+      {/* --- Top Navigation --- */}
+      <nav className="bg-white border-b border-slate-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <span className="text-xl font-bold text-brand">PrimeNym</span>
-              <span className="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                Dashboard
-              </span>
+            <div className="flex items-center gap-2">
+              <div className="bg-blue-600 p-1.5 rounded-lg">
+                <LayoutDashboard className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-xl font-bold text-slate-900 tracking-tight">PrimeNym</span>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-500">{user?.email}</div>
-              <button
-                onClick={handleLogout}
-                className="text-sm text-gray-500 hover:text-red-600 transition-colors"
+            <div className="flex items-center gap-4">
+              <div className="hidden md:flex flex-col items-end">
+                <span className="text-sm font-medium text-slate-700">{user?.email}</span>
+                <span className="text-xs text-slate-500">
+                    {licenseData?.active ? "Pro Plan Active" : "Free Tier"}
+                </span>
+              </div>
+              <button 
+                onClick={() => signOut(auth)} 
+                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                title="Sign Out"
               >
-                Sign Out
+                <LogOut className="w-5 h-5" />
               </button>
             </div>
           </div>
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+      {/* --- Header Hero Section --- */}
+      <div className="bg-slate-900 text-white pb-32 pt-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h1 className="text-3xl font-bold tracking-tight">Dashboard Overview</h1>
+            <p className="mt-2 text-slate-400">Manage your licenses, track usage, and upgrade your analytics power.</p>
+        </div>
+      </div>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-24 pb-12">
         
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Welcome back!</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Manage your API keys and connector licenses here.
-          </p>
+        {/* --- API Key Card (Floating) --- */}
+        <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6 mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex items-start gap-4">
+                <div className="p-3 bg-blue-50 rounded-xl">
+                    <Key className="w-8 h-8 text-blue-600" />
+                </div>
+                <div>
+                    <h3 className="text-lg font-semibold text-slate-900">Master API Key</h3>
+                    <p className="text-slate-500 text-sm">One key for all your connectors. Keep it secret.</p>
+                </div>
+            </div>
+
+            <div className="flex-1 max-w-lg">
+                 <div className="relative flex items-center">
+                    <code className="w-full bg-slate-100 border border-slate-200 text-slate-600 text-sm font-mono px-4 py-3 rounded-lg truncate">
+                        {licenseData?.master_key || "Loading..."}
+                    </code>
+                    <button 
+                        onClick={copyKey}
+                        className="absolute right-2 p-2 bg-white border border-slate-200 rounded-md hover:bg-slate-50 text-slate-500 transition-all shadow-sm"
+                        title="Copy Key"
+                    >
+                        {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                 </div>
+                 {licenseData?.master_key === "PENDING_PURCHASE" && (
+                    <p className="mt-2 text-xs text-amber-600 font-medium flex items-center">
+                        <ShieldCheck className="w-3 h-3 mr-1" />
+                        Purchase a plan to activate this key.
+                    </p>
+                 )}
+            </div>
         </div>
 
-        {/* API Key Section */}
-        <div className="bg-white shadow rounded-lg border border-gray-200 mb-8 p-6">
-            <h3 className="text-lg font-medium text-gray-900">Master API Key</h3>
-            <div className="mt-2 max-w-xl text-sm text-gray-500">
-               <p>Use this single key for all your connectors.</p>
-            </div>
-            <div className="mt-4 rounded-md bg-gray-50 p-3 font-mono text-sm border border-gray-200 text-gray-600 break-all">
-                  {licenseData?.master_key || "Generating Key..."}
-            </div>
-            {licenseData?.master_key === "PENDING_PURCHASE" && (
-                <p className="mt-2 text-xs text-amber-600 font-medium">
-                    * Your key is inactive. Purchase a plan below to unlock it.
-                </p>
-            )}
-        </div>
-
-        {/* Quota Manager - Pass KEY and QUOTAS */}
-        {licenseData && licenseData.quotas ? (
-            <AgencySeatManager 
-                quotas={licenseData.quotas} 
-                licenseKey={licenseData.master_key} // <--- PASSED HERE
-            />
-        ) : (
-            <div className="p-4 bg-yellow-50 text-yellow-700 rounded-md">
-              No subscription data found. Please select a plan below.
-            </div>
-        )}
-
-        {/* Purchase Section */}
-        <div className="mt-12">
-          <h2 className="text-lg leading-6 font-medium text-gray-900 mb-6">
-            Available Plans
-          </h2>
-          
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:gap-8">
-            <PricingCard
-              name="Solo License"
-              price="15"
-              priceId={process.env.NEXT_PUBLIC_STRIPE_PRICE_SOLO || ""} 
-              userId={user?.uid}
-              userEmail={user?.email}
-              features={[
-                "1 WooCommerce Store",
-                "Unlimited Reports",
-                "Email Support"
-              ]}
-            />
+        {/* --- Main Content Grid --- */}
+        <div className="space-y-10">
             
-            <PricingCard
-              name="Agency License"
-              price="50"
-              priceId={process.env.NEXT_PUBLIC_STRIPE_PRICE_AGENCY || ""}
-              userId={user?.uid}
-              userEmail={user?.email}
-              isPopular={true}
-              features={[
-                "5 WooCommerce Stores",
-                "Add Facebook (Coming Soon)",
-                "Priority Support",
-                "Client Management"
-              ]}
-            />
-          </div>
-        </div>
+            {/* 1. Agency Manager */}
+            {licenseData && licenseData.quotas ? (
+                <section>
+                    <AgencySeatManager 
+                        quotas={licenseData.quotas} 
+                        licenseKey={licenseData.master_key} 
+                    />
+                </section>
+            ) : (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-amber-800 text-center">
+                    Please purchase a plan to view your connectors.
+                </div>
+            )}
 
+            {/* 2. Pricing Section */}
+            <section className="pt-10 border-t border-slate-200">
+                <div className="flex items-center gap-2 mb-6">
+                    <CreditCard className="w-6 h-6 text-slate-400" />
+                    <h2 className="text-xl font-semibold text-slate-900">Available Plans</h2>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                    <PricingCard
+                        name="Solo License"
+                        price="15"
+                        priceId={process.env.NEXT_PUBLIC_STRIPE_PRICE_SOLO || ""} 
+                        userId={user?.uid}
+                        userEmail={user?.email}
+                        features={["1 WooCommerce Store", "Unlimited Reports", "Email Support"]}
+                    />
+                    
+                    <PricingCard
+                        name="Agency License"
+                        price="50"
+                        priceId={process.env.NEXT_PUBLIC_STRIPE_PRICE_AGENCY || ""}
+                        userId={user?.uid}
+                        userEmail={user?.email}
+                        isPopular={true}
+                        features={["5 WooCommerce Stores", "Priority Support", "Client Management"]}
+                    />
+                </div>
+            </section>
+
+        </div>
       </main>
     </div>
   );

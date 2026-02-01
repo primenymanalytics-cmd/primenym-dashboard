@@ -2,20 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { auth, db } from "@/lib/firebase";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
-import { 
-    Key, 
-    LogOut, 
-    ShieldCheck, 
-    CreditCard, 
-    LayoutDashboard,
-    Copy,
-    Check
-} from "lucide-react";
+import { Key, Copy, Check, ShieldCheck, PlusCircle } from "lucide-react";
+import Link from "next/link";
 import AgencySeatManager from "@/components/AgencySeatManager";
-import PricingCard from "@/components/PricingCard";
+import Navbar from "@/components/Navbar"; // Use our new Navbar
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -80,46 +73,32 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
-      {/* --- Top Navigation --- */}
-      <nav className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center gap-2">
-              <div className="bg-blue-600 p-1.5 rounded-lg">
-                <LayoutDashboard className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-slate-900 tracking-tight">PrimeNym</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="hidden md:flex flex-col items-end">
-                <span className="text-sm font-medium text-slate-700">{user?.email}</span>
-                <span className="text-xs text-slate-500">
-                    {licenseData?.active ? "Pro Plan Active" : "Free Tier"}
-                </span>
-              </div>
-              <button 
-                onClick={() => signOut(auth)} 
-                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
-                title="Sign Out"
-              >
-                <LogOut className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navbar userEmail={user?.email} activePage="dashboard" />
 
       {/* --- Header Hero Section --- */}
       <div className="bg-slate-900 text-white pb-32 pt-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h1 className="text-3xl font-bold tracking-tight">Dashboard Overview</h1>
-            <p className="mt-2 text-slate-400">Manage your licenses, track usage, and upgrade your analytics power.</p>
+            <div className="flex justify-between items-end">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Dashboard Overview</h1>
+                    <p className="mt-2 text-slate-400">Manage your licenses and track usage.</p>
+                </div>
+                
+                {/* CTA Button to Marketplace */}
+                <Link 
+                    href="/marketplace" 
+                    className="hidden md:flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                >
+                    <PlusCircle className="w-5 h-5" />
+                    Add Connector
+                </Link>
+            </div>
         </div>
       </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-24 pb-12">
         
-        {/* --- API Key Card (Floating) --- */}
+        {/* --- API Key Card --- */}
         <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6 mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex items-start gap-4">
                 <div className="p-3 bg-blue-50 rounded-xl">
@@ -127,7 +106,7 @@ export default function DashboardPage() {
                 </div>
                 <div>
                     <h3 className="text-lg font-semibold text-slate-900">Master API Key</h3>
-                    <p className="text-slate-500 text-sm">One key for all your connectors. Keep it secret.</p>
+                    <p className="text-slate-500 text-sm">One key for all your connectors.</p>
                 </div>
             </div>
 
@@ -153,10 +132,8 @@ export default function DashboardPage() {
             </div>
         </div>
 
-        {/* --- Main Content Grid --- */}
+        {/* --- Main Content --- */}
         <div className="space-y-10">
-            
-            {/* 1. Agency Manager */}
             {licenseData && licenseData.quotas ? (
                 <section>
                     <AgencySeatManager 
@@ -165,40 +142,10 @@ export default function DashboardPage() {
                     />
                 </section>
             ) : (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-amber-800 text-center">
-                    Please purchase a plan to view your connectors.
+                <div className="text-center py-12">
+                   <p className="text-slate-500">Loading your data...</p>
                 </div>
             )}
-
-            {/* 2. Pricing Section */}
-            <section className="pt-10 border-t border-slate-200">
-                <div className="flex items-center gap-2 mb-6">
-                    <CreditCard className="w-6 h-6 text-slate-400" />
-                    <h2 className="text-xl font-semibold text-slate-900">Available Plans</h2>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                    <PricingCard
-                        name="Solo License"
-                        price="15"
-                        priceId={process.env.NEXT_PUBLIC_STRIPE_PRICE_SOLO || ""} 
-                        userId={user?.uid}
-                        userEmail={user?.email}
-                        features={["1 WooCommerce Store", "Unlimited Reports", "Email Support"]}
-                    />
-                    
-                    <PricingCard
-                        name="Agency License"
-                        price="50"
-                        priceId={process.env.NEXT_PUBLIC_STRIPE_PRICE_AGENCY || ""}
-                        userId={user?.uid}
-                        userEmail={user?.email}
-                        isPopular={true}
-                        features={["5 WooCommerce Stores", "Priority Support", "Client Management"]}
-                    />
-                </div>
-            </section>
-
         </div>
       </main>
     </div>

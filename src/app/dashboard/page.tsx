@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { Key, Copy, Check, ShieldCheck, PlusCircle } from "lucide-react";
 import Link from "next/link";
 import AgencySeatManager from "@/components/AgencySeatManager";
-import Navbar from "@/components/Navbar"; // Use our new Navbar
+import Navbar from "@/components/Navbar";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -23,14 +23,16 @@ export default function DashboardPage() {
         router.push("/login");
       } else {
         setUser(currentUser);
-        await fetchOrCreateUser(currentUser.uid, currentUser.email);
+        // Pass the display name and email to the creator function
+        await fetchOrCreateUser(currentUser.uid, currentUser.email, currentUser.displayName);
         setLoading(false);
       }
     });
     return () => unsubscribe();
   }, [router]);
 
-  const fetchOrCreateUser = async (uid: string, email: string | null) => {
+  // UPDATED: Now accepts displayName
+  const fetchOrCreateUser = async (uid: string, email: string | null, displayName: string | null) => {
     try {
       const docRef = doc(db, "licenses", uid);
       const docSnap = await getDoc(docRef);
@@ -38,16 +40,20 @@ export default function DashboardPage() {
       if (docSnap.exists()) {
         setLicenseData(docSnap.data());
       } else {
+        // User is NEW! Create a "Free Tier" record automatically.
         const freeTierData = {
           owner_id: uid,
+          display_name: displayName || "User", // <--- Save Name from Google Auth
           customer_email: email,
           master_key: "PENDING_PURCHASE",
           active: true,
+          created_at: new Date(),
           quotas: {
             WOOCOMMERCE: { limit: 0, used_items: [] },
             FACEBOOK: { limit: 0, used_items: [] }
           }
         };
+        
         await setDoc(docRef, freeTierData);
         setLicenseData(freeTierData);
       }
@@ -73,7 +79,12 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
-      <Navbar userEmail={user?.email} activePage="dashboard" />
+      {/* Pass userName to Navbar */}
+      <Navbar 
+        userName={user?.displayName} 
+        userEmail={user?.email} 
+        activePage="dashboard" 
+      />
 
       {/* --- Header Hero Section --- */}
       <div className="bg-slate-900 text-white pb-32 pt-12">
@@ -84,7 +95,6 @@ export default function DashboardPage() {
                     <p className="mt-2 text-slate-400">Manage your licenses and track usage.</p>
                 </div>
                 
-                {/* CTA Button to Marketplace */}
                 <Link 
                     href="/marketplace" 
                     className="hidden md:flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-medium transition-colors"

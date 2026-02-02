@@ -87,7 +87,11 @@ export default function MarketplacePage() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
-      <Navbar userEmail={user?.email} activePage="marketplace" />
+      <Navbar 
+        userName={user?.displayName} 
+        userEmail={user?.email} 
+        activePage="marketplace" 
+        />
 
       {/* Hero Header */}
       <div className="bg-slate-900 text-white py-16">

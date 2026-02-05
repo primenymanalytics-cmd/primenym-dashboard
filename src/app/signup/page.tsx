@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, updateProfile } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore"; // <--- Import Firestore functions
-import { auth, db } from "@/lib/firebase"; // <--- Import db
+import { doc, setDoc } from "firebase/firestore"; 
+import { auth, db } from "@/lib/firebase"; 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
+import Navbar from "@/components/Navbar";
 
 export default function SignupPage() {
   const [fullName, setFullName] = useState("");
@@ -22,6 +23,7 @@ export default function SignupPage() {
     e.preventDefault();
     setError("");
 
+    // 1. Validation
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
@@ -38,22 +40,22 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      // 1. Create Authentication User
+      // 2. Create Authentication User
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // 2. Update Auth Profile (so it shows in top right corner immediately)
+      // 3. Update Auth Profile (so name shows in top right corner immediately)
       await updateProfile(user, {
         displayName: fullName
       });
 
-      // 3. Create Firestore Document IMMEDIATELY
-      // This ensures the name is saved to the database right now.
+      // 4. Create Firestore Document IMMEDIATELY
+      // This ensures the license key generation happens right now.
       await setDoc(doc(db, "licenses", user.uid), {
         owner_id: user.uid,
-        display_name: fullName, // <--- Saving the Name!
+        display_name: fullName,
         customer_email: user.email,
-        master_key: "PENDING_PURCHASE",
+        master_key: "PENDING_PURCHASE", // Default status until they buy a plan
         active: true,
         created_at: new Date(),
         quotas: {
@@ -62,7 +64,7 @@ export default function SignupPage() {
         }
       });
 
-      // 4. Redirect to Dashboard
+      // 5. Redirect to Dashboard
       router.push("/dashboard");
 
     } catch (err: any) {
@@ -79,9 +81,8 @@ export default function SignupPage() {
   const handleGoogleSignIn = async () => {
     try {
       const provider = new GoogleAuthProvider();
-      // Google Sign-In handles the redirects/popups
-      // The Firestore creation for Google users will be handled by the Dashboard page
-      // because we can't easily intercept the "first time" here without complex logic.
+      // For Google Sign-In, the Dashboard page will handle the Firestore creation
+      // because we can't easily intercept the "first time" event here without complex logic.
       await signInWithPopup(auth, provider);
       router.push("/dashboard");
     } catch (error) {
@@ -90,24 +91,27 @@ export default function SignupPage() {
   };
 
   return (
+    <>
+    {/* Navbar in Guest Mode (Logo only) */}
+    <Navbar activePage="auth" />
+
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      
+      {/* Header Text */}
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center">
-            <div className="bg-blue-600 p-2 rounded-xl">
-                <LayoutDashboard className="w-8 h-8 text-white" />
-            </div>
-        </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-slate-900">
           Create your account
         </h2>
         <p className="mt-2 text-center text-sm text-slate-600">
-          Join PrimeNym today.
+          Join PrimeNym and start visualizing your data.
         </p>
       </div>
 
+      {/* Main Card */}
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 border border-slate-200">
           
+          {/* Error Message Display */}
           {error && (
             <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm flex items-center gap-2">
                 <AlertCircle className="w-4 h-4" />
@@ -116,6 +120,8 @@ export default function SignupPage() {
           )}
 
           <form className="space-y-5" onSubmit={handleSignup}>
+            
+            {/* Full Name Field */}
             <div>
               <label htmlFor="fullName" className="block text-sm font-medium text-slate-700">
                 Full Name
@@ -134,6 +140,7 @@ export default function SignupPage() {
               </div>
             </div>
 
+            {/* Email Field */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-slate-700">
                 Email address
@@ -152,6 +159,7 @@ export default function SignupPage() {
               </div>
             </div>
 
+            {/* Password Field */}
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-slate-700">
                 Password
@@ -170,6 +178,7 @@ export default function SignupPage() {
               </div>
             </div>
 
+            {/* Confirm Password Field */}
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-700">
                 Confirm Password
@@ -187,6 +196,7 @@ export default function SignupPage() {
               </div>
             </div>
 
+            {/* Submit Button */}
             <div>
               <button
                 type="submit"
@@ -198,6 +208,7 @@ export default function SignupPage() {
             </div>
           </form>
 
+          {/* Social Login Separator */}
           <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -224,6 +235,7 @@ export default function SignupPage() {
             </div>
           </div>
           
+          {/* Footer Link to Login */}
           <div className="mt-6 text-center">
              <p className="text-sm text-slate-600">
                 Already have an account?{" "}
@@ -236,5 +248,6 @@ export default function SignupPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

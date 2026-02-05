@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import "./globals.css"; // <--- THIS LINE IS LIKELY MISSING OR BROKEN
+import "./globals.css";
+import Footer from "@/components/Footer";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -15,8 +16,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={inter.className}>{children}</body>
+    <html lang="en" className="h-full">
+      <body className={`${inter.className} flex flex-col min-h-screen bg-slate-50`}>
+        {/* Added 'pt-16' (padding-top) to compensate for the fixed navbar height.
+           This prevents the dashboard from hiding behind the logo.
+        */}
+        <div className="flex-grow pt-16">
+            {children}
+        </div>
+        
+        <Footer />
+      </body>
     </html>
   );
 }

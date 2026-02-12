@@ -29,7 +29,8 @@ function AuthorizeContent() {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (!currentUser) {
         // If not logged in, redirect to login with a return URL
-        const returnUrl = encodeURIComponent(`/auth/looker/authorize?redirect_uri=${redirectUri}&state=${state}`);
+        // We must encode the components to prevent URL breaking
+        const returnUrl = encodeURIComponent(`/auth/looker/authorize?redirect_uri=${encodeURIComponent(redirectUri || "")}&state=${encodeURIComponent(state || "")}`);
         router.push(`/login?redirect=${returnUrl}`);
       } else {
         setUser(currentUser);
@@ -49,20 +50,32 @@ function AuthorizeContent() {
       const authCode = generateAuthCode();
 
       // 2. Save Code to Firestore (valid for 10 minutes)
-      // We will verify this code in Step 2 (The Token Endpoint)
       await addDoc(collection(db, "auth_codes"), {
         code: authCode,
         uid: user.uid,
         email: user.email,
         created_at: serverTimestamp(),
-        expires_at: new Date(Date.now() + 10 * 60 * 1000), // 10 mins from now
+        expires_at: new Date(Date.now() + 10 * 60 * 1000), // 10 mins
         used: false
       });
 
-      // 3. Redirect back to Looker Studio
-      // This closes the popup and passes the code to Google
-      const callbackUrl = `${redirectUri}?code=${authCode}&state=${state}`;
-      window.location.href = callbackUrl;
+      // 3. Redirect back to Looker Studio (SECURE METHOD)
+      // We use the URL object to automatically handle encoding of special characters in 'state'
+      try {
+        const callbackUrl = new URL(redirectUri);
+        callbackUrl.searchParams.set("code", authCode);
+        if (state) {
+            callbackUrl.searchParams.set("state", state);
+        }
+        
+        // Force a hard redirect to the clean URL
+        window.location.href = callbackUrl.toString();
+        
+      } catch (urlError) {
+        console.error("Invalid Redirect URI:", redirectUri);
+        setError("Invalid redirect URI provided by Looker Studio.");
+        setProcessing(false);
+      }
 
     } catch (err: any) {
       console.error(err);
@@ -92,20 +105,12 @@ function AuthorizeContent() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        
-        {/* Logo Area */}
         <div className="flex justify-center mb-6">
-           <Image 
-               src="/full-logo.svg" 
-               alt="PrimeNym" 
-               width={180} 
-               height={40} 
-               className="object-contain"
-           />
+           {/* Replace with your logo or text if file missing */}
+           <h2 className="text-2xl font-bold text-slate-900">PrimeNym</h2>
         </div>
 
         <div className="bg-white py-8 px-4 shadow-xl sm:rounded-lg sm:px-10 border border-slate-200 text-center">
-          
           <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 mb-4">
             <ShieldCheck className="h-6 w-6 text-blue-600" />
           </div>
@@ -115,10 +120,9 @@ function AuthorizeContent() {
           </h3>
           
           <p className="text-sm text-slate-500 mb-6">
-            Looker Studio wants to access your <strong>PrimeNym</strong> account to retrieve connector data.
+            Looker Studio wants to access your <strong>PrimeNym</strong> account.
           </p>
 
-          {/* User Info Card */}
           <div className="bg-slate-50 rounded-lg p-3 mb-6 flex items-center gap-3 border border-slate-100 text-left">
              <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs">
                 {user.email?.substring(0,2).toUpperCase()}
@@ -159,18 +163,12 @@ function AuthorizeContent() {
                 Cancel
             </button>
           </div>
-          
-          <p className="mt-6 text-xs text-slate-400">
-            This will allow Looker Studio to view your configured connectors and report data.
-          </p>
-
         </div>
       </div>
     </div>
   );
 }
 
-// Wrap in Suspense for Next.js boundary requirements
 export default function AuthorizePage() {
   return (
     <Suspense fallback={<div className="p-10 text-center">Loading...</div>}>
